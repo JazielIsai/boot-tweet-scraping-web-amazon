@@ -1,74 +1,154 @@
-//const { postTweet } = require("./tweetAPI.js");
-//const Scraping = require("./scrapingWeb");
+
+require('dotenv').config();
 const puppeteer = require("puppeteer");
+const Tweet = require('twit');
 
-var twit = require("twit");
 
-var Twitter = new twit({
-  consumer_key: "sju4nRN0oJjBn4T3aTc3AuUfw",
-  consumer_secret: "ccYmczcQdooe0aImCOVsI0JK6ySiwTCHh90Bk7DkK19urBxsVi",
-  access_token: "1453195308591050754-EZm3fY86WQLIrh9cBX3UVwqihv9Ztp",
-  access_token_secret: "afRPnEoR9BYPctcWyFBGV5pXvrOPwCYyUKFlDqo7Vxhnv",
-  timeout_ms: 60 * 1000, //
+const Twitter = new Tweet({
+  consumer_key: process.env.consumer_key,
+  consumer_secret: process.env.consumer_secret,
+  access_token: process.env.access_token,
+  access_token_secret: process.env.access_token_secret,
+  timeout_ms: 60 * 5000, //
   strictSSL: true, //opciones
-});
+}); 
 
 async function run() {
-  const browser = await puppeteer.launch({ headless: false });
-  const page = await browser.newPage();
-  const item_inmersion = [];
-  async function getPageData() {
-    await page.goto(
-      "https://www.amazon.com.mx/gp/bestsellers/books/ref=zg_bs_pg_1?ie=UTF8&pg=1"
-    );
-    const data = await page.evaluate(() => {
-      const $item_immersion = document.querySelectorAll("#zg-ordered-list");
-      //const $pagination = document.querySelectorAll(".a-row .a-text-center .a-pagination .a-normal a");
-      //const totalPages = Number($pagination[$pagination.length - 1]);
-      const dataBook = [];
-      $item_immersion.forEach(($item) => {
-        dataBook.push({
-          author: $item
-            .querySelector(".a-section .aok-inline-block .a-row .a-size-small")
-            .textContent.trim(),
-          nameBook: $item
-            .querySelector(".p13n-sc-truncated")
-            .textContent.trim(),
-          price: $item
-            .querySelector(".a-row .a-link-normal .p13n-sc-price")
-            .textContent.trim(),
-          //link: $item.querySelector('.a-section .aok-inline-block a').textContent.trim(),
-        });
-      });
-      return {
-        dataBook
-        //$pagination,
-      };
+  try {
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+     
+    await page.goto("https://www.amazon.com.mx");
+    /*await page.screenshot({
+          path: 'screenshot.png',
+          fullPage: true,
+       })*/
+
+    await page.type("#twotabsearchtextbox", "Libros de Programación");
+
+    await page.click(".nav-search-submit #nav-search-submit-button");
+
+    await page.waitForSelector("[data-component-type=s-search-result]");
+    
+    //await page.screenshot({path: 'amazonComponent.png'});
+
+    const enlaces = await page.evaluate(() => {
+      const elements = document.querySelectorAll("[data-component-type=s-search-result] h2 a");
+
+      const links = [];
+
+      for (let element of elements) {
+        links.push(element.href);
+      }
+      return links;
     });
 
-    console.log(data);
-    console.log(`Autor del libro: ${data.dataBook[0].author} Nombre del Libro: ${data.dataBook[0].nameBook} Precio: ${data.dataBook[0].price}`);
+    //console.log(enlaces.length)
+    const booksData = [];
 
-    Twitter.post("statuses/update", { status: `Autor del libro: ${data.dataBook[0].author} Nombre del Libro: ${data.dataBook[0].nameBook} Precio: ${data.dataBook[0].price}` })
-      .then((tweet) => {
-        console.log(tweet);
-      })
-      .catch((err) => {
-        console.log(err);
+    for (let enlace of enlaces) {
+      await page.goto(enlace);
+      await page.waitForSelector("#productTitle");
+
+      const databook = await page.evaluate(() => {
+        try {
+          const data = {};
+  
+          data.title = document.querySelector("#productTitle").innerText;
+          data.author = document.querySelector(".author a").innerText;
+          data.price = document.querySelector(".swatchElement .a-button-inner .a-size-base").innerText;
+          //data.link = enlace;
+  
+          return data;
+
+        } catch (err) {
+          console.log(err);
+        }
       });
-    //await Tweet.postTweet(data);
+
+      booksData.push(databook);
+    }
+
+    //console.log(booksData);
+    return booksData;
+    //await browser.close();
+  } catch (err) {
+    console.log(err);
   }
-
-  getPageData();
-
-  /*
-  postTweet()
-    .then(product => console.log(product))
-    .catch(error => console.log(error))
-  ;*/
-
-  //await browser.close();
 }
 
-run();
-//Tweet.postTweet("Hola");
+/*
+let propiedadesBooks = [];
+let index = 0;
+
+propitiesBook()
+  .then( (twetear) => {
+    propiedadesBooks = twetear;
+    console.log(propiedadesBooks);
+  })
+  .catch(err => {
+    console.log(err);
+  })
+
+*/
+
+/*
+async function Send(){
+  let get = await run();
+  console.log(get);
+}
+Send();
+*/
+
+
+async function fetch_publishertweet(index) {
+  try {
+    
+    //console.log(propiedadesBooks);
+    let propiedadesBooks = await run();
+    
+    let i = 0;
+
+    console.log(i);
+    let myInterval = setInterval(() => {
+      Twitter.post("statuses/update", {
+        status: `Amazon te ofrece los mejores libros de programacion, el titulo: ${propiedadesBooks[i].title} su autor: ${propiedadesBooks[i].author}, su precio es: ${propiedadesBooks[i].price} `,
+      })
+        .then((tweet) => {
+          console.log(tweet);
+        })
+        .catch((err) => console.log(err));
+      console.log(i);
+      i++;
+      if (i === propiedadesBooks.length) {
+        clearInterval(myInterval);
+      }
+    }, 10000);
+      
+      //console.log(book);
+
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+fetch_publishertweet(0);
+
+/*
+function publisherEverySoOften() {
+  let i = 0;
+
+  console.log(i);
+  let myInterval = setInterval(() => {
+    fetch_publishertweet(i);
+    console.log(i);
+    i++;
+    if (i === 2) {
+      clearInterval(myInterval);
+    }
+  }, 15000);
+}
+
+publisherEverySoOften();
+
+//run();*/

@@ -11,6 +11,7 @@
   "author": "Isaí Garrido",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^10.0.0",
     "puppeteer": "^11.0.0",
     "twit": "^2.2.11"
   }
