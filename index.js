@@ -101,7 +101,7 @@ Send();
 */
 
 
-async function fetch_publishertweet(index) {
+async function fetch_publishertweet() {
   try {
     
     //console.log(propiedadesBooks);
@@ -123,7 +123,7 @@ async function fetch_publishertweet(index) {
       if (i === propiedadesBooks.length) {
         clearInterval(myInterval);
       }
-    }, 10000);
+    }, 15000);
       
       //console.log(book);
 
@@ -132,7 +132,7 @@ async function fetch_publishertweet(index) {
   }
 }
 
-fetch_publishertweet(0);
+fetch_publishertweet();
 
 /*
 function publisherEverySoOften() {
