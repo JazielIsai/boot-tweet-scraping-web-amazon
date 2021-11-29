@@ -1,9 +1,10 @@
 
-require('dotenv').config();
-const puppeteer = require("puppeteer");
-const Tweet = require('twit');
+// Importaciones de las librerias de node que se ocupan
+require('dotenv').config(); //variables de entorno
+const puppeteer = require("puppeteer"); // libreria que permite el scraping
+const Tweet = require('twit'); //libreria de twitter
 
-
+//Conexion a la app de Twitter al boot
 const Twitter = new Tweet({
   consumer_key: process.env.consumer_key,
   consumer_secret: process.env.consumer_secret,
@@ -13,7 +14,8 @@ const Twitter = new Tweet({
   strictSSL: true, //opciones
 }); 
 
-async function run() {
+//Funcion que hace el scraping a la pagina de amazon, obteniendo los nombres, precio y el autor del libro
+async function scrapingWeb() {
   try {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
@@ -23,26 +25,18 @@ async function run() {
           path: 'screenshot.png',
           fullPage: true,
        })*/
-
     await page.type("#twotabsearchtextbox", "Libros de Programación");
-
     await page.click(".nav-search-submit #nav-search-submit-button");
-
     await page.waitForSelector("[data-component-type=s-search-result]");
-    
     //await page.screenshot({path: 'amazonComponent.png'});
-
     const enlaces = await page.evaluate(() => {
       const elements = document.querySelectorAll("[data-component-type=s-search-result] h2 a");
-
       const links = [];
-
       for (let element of elements) {
         links.push(element.href);
       }
       return links;
     });
-
     //console.log(enlaces.length)
     const booksData = [];
 
@@ -53,22 +47,18 @@ async function run() {
       const databook = await page.evaluate(() => {
         try {
           const data = {};
-  
           data.title = document.querySelector("#productTitle").innerText;
           data.author = document.querySelector(".author a").innerText;
           data.price = document.querySelector(".swatchElement .a-button-inner .a-size-base").innerText;
           //data.link = enlace;
-  
           return data;
 
         } catch (err) {
           console.log(err);
         }
       });
-
       booksData.push(databook);
     }
-
     //console.log(booksData);
     return booksData;
     //await browser.close();
@@ -100,12 +90,12 @@ async function Send(){
 Send();
 */
 
-
+//va a buscar los libors por medio del scraping para despues publicarlos
 async function fetch_publishertweet() {
   try {
     
     //console.log(propiedadesBooks);
-    let propiedadesBooks = await run();
+    let propiedadesBooks = await scrapingWeb();
     
     let i = 0;
 
@@ -132,6 +122,7 @@ async function fetch_publishertweet() {
   }
 }
 
+//Mandamos a llamar a la funcion para correr el codigo
 fetch_publishertweet();
 
 /*
